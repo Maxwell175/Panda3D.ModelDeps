@@ -1,0 +1,94 @@
+name: build
+
+# Builds the panda-model-deps NativeAOT binary for every RID, then packs the Panda3D.ModelDeps
+# NuGet (tools/<rid>/panda-model-deps + buildTransitive targets). One binary per OS/arch because
+# NativeAOT can't cross-compile across OSes; macOS builds both arches on one runner. The
+# Panda3D.Interop / Panda3D.Runtime.<rid> packages resolve from nuget.org.
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, rid: linux-x64 }
+          - { os: windows-2022, rid: win-x64  }
+          - { os: macOS-15,     rid: osx-x64  }   # cross-arch AOT on the arm64 runner
+          - { os: macOS-15,     rid: osx-arm64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0'
+
+      # The NativeAOT link statically pulls in Panda's libs, which reference the system
+      # GL/X11/SM/ICE libraries (-lGL -lEGL -lX11 -lXext -lSM -lICE in the ILC link line), so
+      # their -dev packages must be present for the linker. Windows (MSVC) and macOS (Xcode)
+      # ship their equivalents with the toolchain, so this is Linux-only.
+      - name: Install link prerequisites (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev libegl1-mesa-dev \
+            libx11-dev libxext-dev libsm-dev libice-dev
+
+      - name: Publish (${{ matrix.rid }})
+        run: dotnet publish src/Panda3D.ModelDeps -c Release -r ${{ matrix.rid }} -p:PublishAot=true -o out
+
+      - name: Stage binary (exe only — drop symbols/docs)
+        shell: bash
+        run: |
+          mkdir -p "tools/${{ matrix.rid }}"
+          cp out/panda-model-deps     "tools/${{ matrix.rid }}/" 2>/dev/null || true
+          cp out/panda-model-deps.exe "tools/${{ matrix.rid }}/" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tools-${{ matrix.rid }}
+          path: tools/
+          if-no-files-found: error
+
+  pack:
+    name: pack Panda3D.ModelDeps
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0'
+
+      # Merge every tools-<rid> artifact back into one build/tools/<rid>/ tree.
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: tools-*
+          path: build/tools
+          merge-multiple: true
+
+      - name: Pack
+        run: dotnet pack src/Panda3D.ModelDeps.Package -c Release -o artifacts -p:ToolsDir="$PWD/build/tools"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Panda3D.ModelDeps.nupkg
+          path: artifacts/*.nupkg
+          if-no-files-found: error

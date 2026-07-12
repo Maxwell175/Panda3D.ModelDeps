@@ -1,0 +1,43 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Panda3D.ModelDeps ships one NativeAOT exe per platform under tools/<rid>/; this picks the
+       host RID at build time (Grpc.Tools/Panda3D.Tools style) and exposes $(PandaModelDeps). -->
+
+  <PropertyGroup>
+    <_PMDPkgRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../tools/'))</_PMDPkgRoot>
+    <_PMDHostRid Condition="'$(NETCoreSdkPortableRuntimeIdentifier)' != ''">$(NETCoreSdkPortableRuntimeIdentifier)</_PMDHostRid>
+  </PropertyGroup>
+
+  <!-- Fallback: derive from OS + process architecture if the SDK RID is missing or unshipped. -->
+  <PropertyGroup Condition="'$(_PMDHostRid)' == '' or !Exists('$(_PMDPkgRoot)$(_PMDHostRid)')">
+    <_PMDArch>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</_PMDArch>
+    <_PMDHostRid Condition="$([MSBuild]::IsOSPlatform('Windows'))">win-x64</_PMDHostRid>
+    <_PMDHostRid Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux-x64</_PMDHostRid>
+    <_PMDHostRid Condition="$([MSBuild]::IsOSPlatform('OSX')) and '$(_PMDArch)' == 'arm64'">osx-arm64</_PMDHostRid>
+    <_PMDHostRid Condition="$([MSBuild]::IsOSPlatform('OSX')) and '$(_PMDArch)' != 'arm64'">osx-x64</_PMDHostRid>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PandaModelDepsDir>$([System.IO.Path]::GetFullPath('$(_PMDPkgRoot)$(_PMDHostRid)'))</PandaModelDepsDir>
+    <_PMDExeExt Condition="$([MSBuild]::IsOSPlatform('Windows'))">.exe</_PMDExeExt>
+    <PandaModelDepsAvailable Condition="Exists('$(PandaModelDepsDir)')">true</PandaModelDepsAvailable>
+    <!-- The tool path. Consumers pass this to their dependency-analysis step. -->
+    <PandaModelDeps Condition="'$(PandaModelDepsAvailable)' == 'true'">$(PandaModelDepsDir)/panda-model-deps$(_PMDExeExt)</PandaModelDeps>
+  </PropertyGroup>
+
+  <!-- NuGet drops the Unix exec bit; restore +x on the host binary once per build. No-op on Windows. -->
+  <Target Name="PandaModelDepsEnsureExecutable"
+          BeforeTargets="BeforeBuild;BeforeCompile"
+          Condition="'$(PandaModelDepsAvailable)' == 'true' and !$([MSBuild]::IsOSPlatform('Windows'))">
+    <Exec Command="chmod +x &quot;$(PandaModelDeps)&quot;" ContinueOnError="true" />
+  </Target>
+
+  <!-- A missing host bundle is a warning, not an error (a project may reference it while building
+       on a platform this package drop didn't include). -->
+  <Target Name="PandaModelDepsCheckAvailable"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(PandaModelDepsAvailable)' != 'true'">
+    <Warning Text="Panda3D.ModelDeps: no panda-model-deps binary for host RID '$(_PMDHostRid)' in this package (looked in '$(PandaModelDepsDir)'). Steps that use $(PandaModelDeps) will be skipped." />
+  </Target>
+
+</Project>

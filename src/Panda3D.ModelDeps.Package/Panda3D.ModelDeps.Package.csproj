@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Packs the per-RID NativeAOT panda-model-deps binaries (built by publishing the sibling
+    Panda3D.ModelDeps app) into a Panda3D.Tools-style NuGet: tools/<rid>/panda-model-deps +
+    buildTransitive/Panda3D.ModelDeps.targets exposing $(PandaModelDeps). No managed lib output.
+
+    CI publishes the app for every RID into $(ToolsDir) then packs this. Locally, pack.sh does
+    the host RID. Override the staging dir with -p:ToolsDir=...
+  -->
+
+  <PropertyGroup>
+    <PackageId>Panda3D.ModelDeps</PackageId>
+    <Description>Host-selected NativeAOT tool that lists the texture files a Panda model (.egg/.egg.pz/.bam/…) references, for dependency-aware asset builds. Ships tools/&lt;rid&gt;/panda-model-deps and $(PandaModelDeps).</Description>
+
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeBuildOutputInPackage>false</IncludeBuildOutputInPackage>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+
+    <!-- Where the published per-RID binaries are staged. CI/pack.sh fills tools/<rid>/. -->
+    <ToolsDir Condition="'$(ToolsDir)' == ''">$(MSBuildThisFileDirectory)../../build/tools</ToolsDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(ToolsDir)/**" Pack="true" PackagePath="tools/" />
+    <None Include="buildTransitive/Panda3D.ModelDeps.targets"
+          Pack="true" PackagePath="buildTransitive/Panda3D.ModelDeps.targets" />
+    <None Include="../../README.md" Pack="true" PackagePath="/" Condition="Exists('../../README.md')" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    panda-model-deps — loads a model (.egg/.egg.pz/.bam/…) through the Panda bindings and prints
+    the texture files it references (resolved paths + EXISTS/MISSING). Standalone tool; a build
+    can run it to make model->bam builds dependency-aware.
+
+    Shipped Tools-style: PublishAot'd to a single self-contained native exe per RID, packed by
+    Panda3D.ModelDeps.Package under tools/<rid>/ and host-selected by its targets. AOT => the
+    lean/Release Interop variant linked against Panda's static native libs from Panda3D.Runtime.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>panda-model-deps</AssemblyName>
+    <RootNamespace>Panda3D.ModelDeps</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RollForward>Major</RollForward>
+
+    <!-- Always compile against the lean (AOT-safe) binding surface; it works under JIT too. -->
+    <Panda3DInteropConfiguration>Release</Panda3DInteropConfiguration>
+    <!-- Ship as a self-contained NativeAOT binary. -->
+    <PublishAot>true</PublishAot>
+    <IsPackable>false</IsPackable>
+
+    <!-- Native runtime that matches the RID being built/published (or the host RID for a plain
+         build). NuGet resolves the package id from this property. -->
+    <_RidForRuntime>$(RuntimeIdentifier)</_RidForRuntime>
+    <_RidForRuntime Condition="'$(_RidForRuntime)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</_RidForRuntime>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Panda3D.Interop" Version="$(PandaInteropVersion)" />
+    <PackageReference Include="Panda3D.Runtime.$(_RidForRuntime)" Version="$(PandaRuntimeVersion)" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,23 @@
+<Project>
+
+  <!-- Shared conventions for Panda3D.ModelDeps. Versioned independently of the framework. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- The tool's own version line. -->
+    <Version>0.1.0</Version>
+    <Authors>Panda3D.ModelDeps</Authors>
+    <PackageProjectUrl>https://github.com/Maxwell175/Panda3D.ModelDeps</PackageProjectUrl>
+    <!-- Source link on the published package. -->
+    <RepositoryUrl>https://github.com/Maxwell175/Panda3D.ModelDeps</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+
+    <!-- Binding coordinates it builds against (the AOT binary embeds these). Override to pin. -->
+    <PandaInteropVersion Condition="'$(PandaInteropVersion)' == ''">1.11.0-preview.*</PandaInteropVersion>
+    <PandaRuntimeVersion Condition="'$(PandaRuntimeVersion)' == ''">1.11.0-preview.*</PandaRuntimeVersion>
+  </PropertyGroup>
+
+</Project>
