@@ -10,6 +10,7 @@
     <!-- The tool's own version line. -->
     <Version>0.1.0</Version>
     <Authors>Panda3D.ModelDeps</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Maxwell175/Panda3D.ModelDeps</PackageProjectUrl>
     <!-- Source link on the published package. -->
     <RepositoryUrl>https://github.com/Maxwell175/Panda3D.ModelDeps</RepositoryUrl>
