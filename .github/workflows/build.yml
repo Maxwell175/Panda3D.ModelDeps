@@ -51,7 +51,30 @@ jobs:
             libx11-dev libxext-dev libsm-dev libice-dev
 
       - name: Publish (${{ matrix.rid }})
-        run: dotnet publish src/Panda3D.ModelDeps -c Release -r ${{ matrix.rid }} -p:PublishAot=true -o out
+        shell: bash
+        run: |
+          set -eo pipefail
+          dotnet publish src/Panda3D.ModelDeps -c Release -r ${{ matrix.rid }} -p:PublishAot=true -o out 2>&1 | tee publish.log
+          # Catch a wrong-arch static lib in the runtime package: the AOT linker silently
+          # ignores it (a warning, not an error), which would ship a binary built on a broken
+          # foundation. Fail the build instead.
+          if grep -qiE 'ignoring file.*(but attempting to link with file built for|is not the architecture being linked)' publish.log; then
+            echo "::error::AOT link ignored an architecture-mismatched library for ${{ matrix.rid }} — a Panda3D.Runtime static lib is the wrong arch."
+            exit 1
+          fi
+
+      - name: Smoke test (${{ matrix.rid }})
+        shell: bash
+        run: |
+          set -eo pipefail
+          BIN=$(ls out/panda-model-deps out/panda-model-deps.exe 2>/dev/null | head -1)
+          chmod +x "$BIN" 2>/dev/null || true
+          # Egg path (EggData -> libpandaegg -> libpanda): must resolve the referenced texture.
+          out=$("$BIN" --model-root tests/assets tests/assets/test.egg)
+          echo "$out"
+          echo "$out" | grep -qE 'test\.png.*EXISTS' || { echo "::error::egg texture dependency not resolved"; exit 1; }
+          # Loader path (libpanda): must load a bam without crashing.
+          "$BIN" tests/assets/test.bam
 
       - name: Stage binary (exe only — drop symbols/docs)
         shell: bash

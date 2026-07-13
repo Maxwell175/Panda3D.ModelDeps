@@ -1,0 +1,28 @@
+<CoordinateSystem> { Z-Up }
+
+<Texture> tex {
+  "test.png"
+}
+
+<VertexPool> box {
+  <Vertex> 1 { 0 1 1 <UV> { 1 1 } }
+  <Vertex> 2 { 1 1 1 <UV> { 0 1 } }
+  <Vertex> 3 { 0 0 1 <UV> { 0 1 } }
+  <Vertex> 4 { 1 0 1 <UV> { 1 1 } }
+  <Vertex> 5 { 0 1 0 <UV> { 1 0 } }
+  <Vertex> 6 { 1 1 0 <UV> { 0 0 } }
+  <Vertex> 7 { 0 0 0 <UV> { 0 0 } }
+  <Vertex> 8 { 1 0 0 <UV> { 1 0 } }
+}
+<Group> box {
+  <Polygon> {
+    <TRef> { tex }
+    <Normal> { 0 0 1 }
+    <VertexRef> { 1 2 4 3 <Ref> { box } }
+  }
+  <Polygon> {
+    <TRef> { tex }
+    <Normal> { 0 0 -1 }
+    <VertexRef> { 5 7 8 6 <Ref> { box } }
+  }
+}
