@@ -67,7 +67,8 @@ jobs:
         shell: bash
         run: |
           set -eo pipefail
-          BIN=$(ls out/panda-model-deps out/panda-model-deps.exe 2>/dev/null | head -1)
+          BIN=out/panda-model-deps
+          [ -f "$BIN.exe" ] && BIN="$BIN.exe"
           chmod +x "$BIN" 2>/dev/null || true
           # Egg path (EggData -> libpandaegg -> libpanda): must resolve the referenced texture.
           out=$("$BIN" --model-root tests/assets tests/assets/test.egg)
